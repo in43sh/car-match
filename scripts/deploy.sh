@@ -20,7 +20,7 @@ step "Running database migrations…"
 npm run db:migrate
 
 step "Building Next.js…"
-npm run build
+NODE_OPTIONS='--max-old-space-size=1536' npm run build
 
 step "Reloading pm2 apps…"
 # reload = zero-downtime for web; restart for worker
