@@ -28,7 +28,7 @@ const STATUS_BADGE: Record<string, string> = {
 
 export default function ListingsPage() {
   const router = useRouter()
-  const [tab, setTab]     = useState<Tab>('all')
+  const [tab, setTab]     = useState<Tab>('new')
   const [rows, setRows]   = useState<ListingRow[]>([])
   const [loading, setLoading] = useState(true)
 
