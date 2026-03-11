@@ -1,4 +1,4 @@
-import type { CommandContext, Context, CallbackQueryContext } from 'grammy'
+import type { CommandContext, Context, Filter } from 'grammy'
 import { db } from '@/db'
 import { listings } from '@/db/schema'
 import { eq } from 'drizzle-orm'
@@ -55,7 +55,7 @@ export const handleContact     = (ctx: CommandContext<Context>) => handleStatusC
 
 // ─── Inline keyboard callbacks (interested:42, reject:42, contact:42) ─────────
 
-export async function handleCallbackStatus(ctx: CallbackQueryContext<Context>) {
+export async function handleCallbackStatus(ctx: Filter<Context, 'callback_query:data'>) {
   const data   = ctx.callbackQuery.data     // e.g. "interested:42"
   const [action, idStr] = data.split(':')
   const id = parseInt(idStr, 10)
