@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   cookieStore.set('carmatch_session', secret, {
     httpOnly: true,
     sameSite: 'strict',
-    secure: process.env.NODE_ENV === 'production',
+    secure: false,
     path: '/',
     maxAge: 60 * 60 * 24 * 30, // 30 days
   })
