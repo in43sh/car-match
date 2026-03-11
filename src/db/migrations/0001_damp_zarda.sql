@@ -1,0 +1,1 @@
+DROP INDEX `listings_fb_listing_id_unique`;

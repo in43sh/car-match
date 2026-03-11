@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+
+# Next.js
+.next/
+out/
+
+# Build artifacts
+dist/
+
+# Database (local data — never commit)
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+# FB session cookies (contain auth tokens)
+data/fb-session.json
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Playwright browser artifacts
+playwright-report/
+test-results/
+
+# Inspector script output (can contain PII)
+scripts/marketplace-snapshot.png
+scripts/marketplace-snapshot.html
+scripts/first-card.html
+scripts/carfax-snapshot.png
+scripts/carfax-snapshot.html
+scripts/carfax-summary-section.html
+
+# pm2 logs
+logs/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+
+# TypeScript build cache
+tsconfig.tsbuildinfo
