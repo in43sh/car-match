@@ -8,8 +8,6 @@ export async function handleHelp(ctx: CommandContext<Context>) {
     '/interested <i>id</i> — mark listing as Interested\n' +
     '/reject <i>id</i> — mark listing as Rejected\n' +
     '/contact <i>id</i> — mark listing as Contacted\n' +
-    '/carfax <i>url</i> — parse a Carfax report\n' +
-    '/carfax <i>id url</i> — parse and link to listing\n' +
     '/help — show this message',
     { parse_mode: 'HTML' },
   )

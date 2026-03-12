@@ -89,43 +89,27 @@ Split on `" in "` (with spaces) to get title and location. If the alt text is mi
 
 ### Steps
 
-1. SSH into the VPS:
+1. On your **Mac** (headed browser required):
    ```bash
-   ssh user@your-vps-ip
+   cd /Users/sergey/webdev/car-match
+   npm run fb:login          # log in manually in the browser window
    ```
 
-2. Delete the stale session:
+2. Copy the session to the server:
    ```bash
-   rm data/fb-session.json
+   scp data/fb-session.json root@167.71.84.246:/root/car-match/data/fb-session.json
    ```
 
-3. Run the login script (opens a headed browser via Xvfb or VNC):
+3. Restart the worker:
    ```bash
-   npx tsx scripts/fb-login.ts
-   ```
-   Log in manually when the browser opens. The session is saved automatically.
-
-4. Restart the worker:
-   ```bash
-   pm2 restart worker
+   ssh root@167.71.84.246 "source ~/.nvm/nvm.sh && pm2 restart worker"
    ```
 
-5. Check the next scrape cycle completed successfully:
+4. Check the next scrape cycle completed successfully:
    ```bash
-   pm2 logs worker --lines 50
-   cat data/status.json
+   ssh root@167.71.84.246 "pm2 logs worker --lines 50"
+   ssh root@167.71.84.246 "cat /root/car-match/data/status.json"
    ```
-
-### VNC Setup (if not already configured)
-
-If the VPS has no display server for headed Playwright:
-```bash
-apt install -y xvfb
-Xvfb :99 -screen 0 1280x720x24 &
-export DISPLAY=:99
-```
-
-Add `DISPLAY=:99` to the worker's pm2 environment if you need headed mode permanently.
 
 ### Prevention
 
