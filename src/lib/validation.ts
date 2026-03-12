@@ -28,6 +28,18 @@ export const listingStatusSchema = z.object({
   status: z.enum(['new', 'interested', 'rejected', 'contacted']),
 })
 
+export const createListingSchema = z.object({
+  fbUrl:      z.string().regex(/facebook\.com\/marketplace\/item\/\d+/, {
+    message: 'Must be a Facebook Marketplace item URL',
+  }),
+  title:      z.string().min(1).max(200),
+  price:      z.number().int().min(0).max(10_000_000).optional(),
+  mileage:    z.number().int().min(0).max(1_000_000).optional(),
+  year:       z.number().int().min(1900).max(2030).optional(),
+  location:   z.string().min(1).max(200).optional(),
+  sellerType: z.enum(['private', 'dealer']).optional(),
+})
+
 // ─── Carfax ───────────────────────────────────────────────────────────────────
 
 export const createCarfaxSchema = z.object({

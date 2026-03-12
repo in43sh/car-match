@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/db'
 import { listings, searchProfiles } from '@/db/schema'
 import { eq, desc, and, inArray } from 'drizzle-orm'
 import type { ListingStatus } from '@/lib/types'
+import { createListingSchema } from '@/lib/validation'
 
 // ─── GET /api/listings ────────────────────────────────────────────────────────
 // Query params:
@@ -49,4 +50,58 @@ export async function GET(request: Request) {
   }))
 
   return NextResponse.json(data)
+}
+
+// ─── POST /api/listings ───────────────────────────────────────────────────────
+// Manually add a listing by FB Marketplace URL + user-supplied details.
+
+export async function POST(req: NextRequest) {
+  const body = await req.json()
+  const parsed = createListingSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json(
+      { error: 'Validation failed', issues: parsed.error.issues },
+      { status: 400 },
+    )
+  }
+
+  const { fbUrl, title, price, mileage, year, location, sellerType } = parsed.data
+
+  const idMatch = fbUrl.match(/\/item\/(\d+)/)
+  if (!idMatch) {
+    return NextResponse.json({ error: 'Could not extract listing ID from URL' }, { status: 400 })
+  }
+  const fbListingId = idMatch[1]
+  const cleanUrl = 'https://www.facebook.com/marketplace/item/' + fbListingId + '/'
+
+  const existing = db
+    .select({ id: listings.id })
+    .from(listings)
+    .where(eq(listings.fbListingId, fbListingId))
+    .get()
+
+  if (existing) {
+    return NextResponse.json(
+      { error: 'This listing is already in your database', existingId: existing.id },
+      { status: 409 },
+    )
+  }
+
+  const now = new Date().toISOString()
+  const [inserted] = db.insert(listings).values({
+    fbListingId,
+    fbUrl:       cleanUrl,
+    title,
+    price:       price ?? null,
+    mileage:     mileage ?? null,
+    year:        year ?? null,
+    location:    location ?? null,
+    sellerType:  sellerType ?? null,
+    status:      'new',
+    matchedProfileIds: JSON.stringify([]),
+    createdAt:   now,
+    updatedAt:   now,
+  }).returning().all()
+
+  return NextResponse.json({ listing: inserted }, { status: 201 })
 }
