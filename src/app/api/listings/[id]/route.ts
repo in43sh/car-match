@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { db } from '@/db'
 import { listings, searchProfiles, carfaxReports } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 
 // ─── GET /api/listings/[id] ───────────────────────────────────────────────────
 
@@ -33,9 +33,18 @@ export async function GET(
     .all()
     .at(-1) ?? null
 
+  const matchedIds: number[] = JSON.parse(row.listing.matchedProfileIds ?? '[]')
+  const matchedProfiles = matchedIds.length > 1
+    ? db.select({ id: searchProfiles.id, name: searchProfiles.name })
+        .from(searchProfiles)
+        .where(inArray(searchProfiles.id, matchedIds))
+        .all()
+    : []
+
   return NextResponse.json({
     ...row.listing,
     profileName: row.profileName ?? null,
+    matchedProfiles,
     carfax,
   })
 }

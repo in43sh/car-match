@@ -13,6 +13,7 @@ type ListingRow = {
   imageUrl: string | null
   status: 'new' | 'interested' | 'rejected' | 'contacted'
   profileName: string | null
+  matchedProfileCount: number
   createdAt: string
 }
 
@@ -128,8 +129,15 @@ export default function ListingsPage() {
                       {row.status}
                     </span>
                   </td>
-                  <td className="py-3 pr-4 text-[#6b7280] hidden lg:table-cell max-w-[120px] truncate">
-                    {row.profileName ?? '—'}
+                  <td className="py-3 pr-4 hidden lg:table-cell max-w-[140px]">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className="text-[#6b7280] truncate">{row.profileName ?? '—'}</span>
+                      {row.matchedProfileCount > 1 && (
+                        <span className="shrink-0 text-[10px] font-medium px-1 py-0.5 rounded bg-[#1e3a5f] text-[#60a5fa]" title={`Matched by ${row.matchedProfileCount} profiles`}>
+                          +{row.matchedProfileCount - 1}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="py-3 pr-4 text-xs text-[#6b7280] whitespace-nowrap hidden xl:table-cell">
                     {new Date(row.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}

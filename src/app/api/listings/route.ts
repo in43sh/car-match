@@ -43,6 +43,9 @@ export async function GET(request: Request) {
   const data = rows.map(({ listing, profileName }) => ({
     ...listing,
     profileName: profileName ?? null,
+    matchedProfileCount: listing.matchedProfileIds
+      ? (JSON.parse(listing.matchedProfileIds) as number[]).length
+      : 1,
   }))
 
   return NextResponse.json(data)

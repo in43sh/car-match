@@ -117,32 +117,42 @@ export async function runScrapeCycle(
       for (const s of scraped) {
         // Dedup check
         const existing = db
-          .select({ id: listings.id })
+          .select({ id: listings.id, matchedProfileIds: listings.matchedProfileIds })
           .from(listings)
           .where(eq(listings.fbListingId, s.fbListingId))
           .get()
 
         if (existing) {
           result.skipped++
+          // Track this profile as also matching the listing
+          const ids: number[] = JSON.parse(existing.matchedProfileIds ?? '[]')
+          if (!ids.includes(profile.id)) {
+            ids.push(profile.id)
+            db.update(listings)
+              .set({ matchedProfileIds: JSON.stringify(ids) })
+              .where(eq(listings.id, existing.id))
+              .run()
+          }
           continue
         }
 
         // Insert
         const now = new Date().toISOString()
         const [inserted] = db.insert(listings).values({
-          fbListingId: s.fbListingId,
-          profileId:   profile.id,
-          title:       s.title,
-          price:       s.price ?? null,
-          mileage:     s.mileage ?? null,
-          year:        s.year ?? null,
-          location:    s.location ?? null,
-          fbUrl:       s.fbUrl,
-          imageUrl:    s.imageUrl ?? null,
-          sellerType:  s.sellerType ?? null,
-          status:      'new',
-          createdAt:   now,
-          updatedAt:   now,
+          fbListingId:       s.fbListingId,
+          profileId:         profile.id,
+          title:             s.title,
+          price:             s.price ?? null,
+          mileage:           s.mileage ?? null,
+          year:              s.year ?? null,
+          location:          s.location ?? null,
+          fbUrl:             s.fbUrl,
+          imageUrl:          s.imageUrl ?? null,
+          sellerType:        s.sellerType ?? null,
+          status:            'new',
+          matchedProfileIds: JSON.stringify([profile.id]),
+          createdAt:         now,
+          updatedAt:         now,
         }).returning().all()
 
         result.inserted++

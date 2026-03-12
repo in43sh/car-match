@@ -18,6 +18,7 @@ type ListingDetail = {
   status: 'new' | 'interested' | 'rejected' | 'contacted'
   notes: string | null
   profileName: string | null
+  matchedProfiles: { id: number; name: string }[]
   alertedAt: string | null
   createdAt: string
   updatedAt: string
@@ -202,6 +203,20 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
           </div>
         ))}
       </div>
+
+      {/* Matched profiles */}
+      {listing.matchedProfiles.length > 1 && (
+        <div className="flex items-center gap-2 mb-5 px-3 py-2 rounded-lg bg-[#1e3a5f]/40 border border-[#1e3a5f]">
+          <span className="text-xs text-[#6b7280] shrink-0">Also matched by</span>
+          <div className="flex flex-wrap gap-1.5">
+            {listing.matchedProfiles.map(p => (
+              <span key={p.id} className="text-xs font-medium text-[#60a5fa] bg-[#1e3a5f] px-2 py-0.5 rounded">
+                {p.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Status */}
       <div className="mb-6">

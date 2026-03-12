@@ -61,6 +61,8 @@ export const listings = sqliteTable(
                    .default('new'),
     /** Set after Telegram alert is confirmed sent. Null = alert not yet sent (or send failed). */
     alertedAt:   text('alerted_at'),
+    /** JSON-encoded array of profile IDs that matched this listing, e.g. '[1,3]'. First ID is the discovering profile. */
+    matchedProfileIds: text('matched_profile_ids'),
     notes:       text('notes'),
     createdAt:   text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt:   text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
