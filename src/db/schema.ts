@@ -57,6 +57,7 @@ export const listings = sqliteTable(
                    .default('new'),
     /** Set after Telegram alert is confirmed sent. Null = alert not yet sent (or send failed). */
     alertedAt:   text('alerted_at'),
+    notes:       text('notes'),
     createdAt:   text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
     updatedAt:   text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   },
