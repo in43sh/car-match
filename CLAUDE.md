@@ -6,7 +6,17 @@
 - **App dir:** /root/car-match
 - **GitHub:** https://github.com/in43sh/car-match
 
+## First-time setup (new server)
+```bash
+npm ci
+cp .env.example .env          # then fill in all secrets
+mkdir -p data && npm run db:migrate
+npm run fb:login               # capture FB session (Mac only)
+pm2 start pm2.config.js && pm2 save && pm2 startup
+```
+
 ## Deploy
+
 ```bash
 # From the server (after pushing to main):
 ssh root@167.71.84.246
