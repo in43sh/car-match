@@ -26,6 +26,10 @@ export const searchProfiles = sqliteTable('search_profiles', {
   /** If true, post-filter results to Toyota/Honda/Mazda/Nissan/Lexus/Infiniti/Acura only. */
   japaneseOnly:   integer('japanese_only', { mode: 'boolean' }).notNull().default(true),
   isActive:       integer('is_active', { mode: 'boolean' }).notNull().default(true),
+  /** Hour (0–23) at which the scraper should stop running this profile. Null = no quiet window. */
+  quietFrom:      integer('quiet_from'),
+  /** Hour (0–23) at which the scraper resumes running this profile. Null = no quiet window. */
+  quietUntil:     integer('quiet_until'),
   createdAt:      text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt:      text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
 })

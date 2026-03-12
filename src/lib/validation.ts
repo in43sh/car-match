@@ -14,6 +14,8 @@ export const createProfileSchema = z.object({
   includePrivate: z.boolean().default(true),
   includeDealers: z.boolean().default(true),
   japaneseOnly:   z.boolean().default(true),
+  quietFrom:      z.number().int().min(0).max(23).nullable().optional(),
+  quietUntil:     z.number().int().min(0).max(23).nullable().optional(),
 })
 
 export const updateProfileSchema = createProfileSchema

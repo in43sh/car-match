@@ -31,6 +31,9 @@ interface FormState {
   includeDealers: boolean
   japaneseOnly: boolean
   isActive: boolean
+  quietEnabled: boolean
+  quietFrom: string
+  quietUntil: string
 }
 
 const DEFAULT_FORM: FormState = {
@@ -46,6 +49,9 @@ const DEFAULT_FORM: FormState = {
   includeDealers: true,
   japaneseOnly: true,
   isActive: true,
+  quietEnabled: false,
+  quietFrom: '22',
+  quietUntil: '7',
 }
 
 function profileToForm(p: SearchProfile): FormState {
@@ -62,10 +68,20 @@ function profileToForm(p: SearchProfile): FormState {
     includeDealers: p.includeDealers,
     japaneseOnly:   p.japaneseOnly,
     isActive:       p.isActive,
+    quietEnabled:   p.quietFrom !== null && p.quietUntil !== null,
+    quietFrom:      p.quietFrom?.toString() ?? '22',
+    quietUntil:     p.quietUntil?.toString() ?? '7',
   }
 }
 
 // ─── Summary line ─────────────────────────────────────────────────────────────
+
+function formatHour(h: number) {
+  if (h === 0) return '12am'
+  if (h < 12) return `${h}am`
+  if (h === 12) return '12pm'
+  return `${h - 12}pm`
+}
 
 function ProfileSummary({ p }: { p: SearchProfile }) {
   const parts: string[] = []
@@ -76,6 +92,9 @@ function ProfileSummary({ p }: { p: SearchProfile }) {
   if (p.maxMileage) parts.push(`≤ ${p.maxMileage.toLocaleString()} mi`)
   if (p.minYear)    parts.push(`≥ ${p.minYear}`)
   parts.push(p.location)
+  if (p.quietFrom !== null && p.quietUntil !== null) {
+    parts.push(`quiet ${formatHour(p.quietFrom)}–${formatHour(p.quietUntil)}`)
+  }
   return <span className="text-xs text-[#6b7280] font-mono">{parts.join(' · ')}</span>
 }
 
@@ -182,6 +201,39 @@ function ProfileForm({
             <span className="text-sm text-[#f0f0f0] group-hover:text-white">{label}</span>
           </label>
         ))}
+      </div>
+
+      {/* Quiet hours */}
+      <div className="space-y-2">
+        <label className="flex items-start gap-2.5 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={form.quietEnabled}
+            onChange={e => set('quietEnabled', e.target.checked)}
+            className="mt-0.5 accent-[#10b981]"
+          />
+          <span className="text-sm text-[#f0f0f0] group-hover:text-white">Quiet hours (pause scraping during set window)</span>
+        </label>
+        {form.quietEnabled && (
+          <div className="grid grid-cols-2 gap-3 pl-6">
+            <div>
+              <label className={labelCls}>From (hour)</label>
+              <select className={inputCls} value={form.quietFrom} onChange={e => set('quietFrom', e.target.value)}>
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={String(h)}>{h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Until (hour)</label>
+              <select className={inputCls} value={form.quietUntil} onChange={e => set('quietUntil', e.target.value)}>
+                {Array.from({ length: 24 }, (_, h) => (
+                  <option key={h} value={String(h)}>{h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
       </div>
 
       {error && <p className="text-sm text-[#ef4444]">{error}</p>}
@@ -375,5 +427,7 @@ function formToPayload(form: FormState) {
     includeDealers: form.includeDealers,
     japaneseOnly:   form.japaneseOnly,
     isActive:       form.isActive,
+    quietFrom:      form.quietEnabled ? parseInt(form.quietFrom, 10) : null,
+    quietUntil:     form.quietEnabled ? parseInt(form.quietUntil, 10) : null,
   }
 }

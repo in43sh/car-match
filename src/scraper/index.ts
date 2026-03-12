@@ -39,6 +39,17 @@ function randomDelay(minMs: number, maxMs: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+function isInQuietWindow(quietFrom: number | null, quietUntil: number | null): boolean {
+  if (quietFrom === null || quietUntil === null) return false
+  const hour = new Date().getHours()
+  if (quietFrom <= quietUntil) {
+    return hour >= quietFrom && hour < quietUntil
+  } else {
+    // Overnight wrap: e.g. from=22, until=6 covers 22,23,0,1,2,3,4,5
+    return hour >= quietFrom || hour < quietUntil
+  }
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 // Track whether we've already alerted about the current session-invalid episode
@@ -77,6 +88,13 @@ export async function runScrapeCycle(
     .from(searchProfiles)
     .where(eq(searchProfiles.isActive, true))
     .all()
+    .filter(p => {
+      if (isInQuietWindow(p.quietFrom ?? null, p.quietUntil ?? null)) {
+        console.log(`[scraper] Profile "${p.name}" — quiet window active, skipping`)
+        return false
+      }
+      return true
+    })
 
   if (activeProfiles.length === 0) {
     console.log('[scraper] No active profiles — nothing to scrape')
