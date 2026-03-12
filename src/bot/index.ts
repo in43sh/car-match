@@ -8,6 +8,7 @@ import { ownerOnly } from './middleware/auth'
 import { handleStart } from './commands/start'
 import { handleHelp } from './commands/help'
 import { handleRecent } from './commands/recent'
+import { handleScraperStatus } from './commands/scraper-status'
 import {
   handleInterested,
   handleReject,
@@ -32,6 +33,7 @@ export function createBot(): Bot<Context> {
   bot.command('start',      handleStart)
   bot.command('help',       handleHelp)
   bot.command('recent',     handleRecent)
+  bot.command('status',     handleScraperStatus)
   bot.command('interested', handleInterested)
   bot.command('reject',     handleReject)
   bot.command('contact',    handleContact)

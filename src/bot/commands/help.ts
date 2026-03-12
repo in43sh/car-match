@@ -3,6 +3,7 @@ import type { CommandContext, Context } from 'grammy'
 export async function handleHelp(ctx: CommandContext<Context>) {
   await ctx.reply(
     '📋 <b>Commands</b>\n\n' +
+    '/status — scraper health (last run, next run, errors)\n' +
     '/recent — 5 most recent New/Interested listings\n' +
     '/interested <i>id</i> — mark listing as Interested\n' +
     '/reject <i>id</i> — mark listing as Rejected\n' +
