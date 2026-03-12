@@ -11,7 +11,7 @@
 import 'dotenv/config'
 import { startJobs } from './jobs'
 import { closeBrowser } from './scraper/browser'
-import { createBot, sendListingAlert } from './bot'
+import { createBot, sendListingAlert, sendSystemAlert } from './bot'
 
 console.log('[worker] Starting CarMatch worker…')
 console.log(`[worker] Node ${process.version} — ${new Date().toISOString()}`)
@@ -25,9 +25,18 @@ bot.start({ drop_pending_updates: true }).catch((err) => {
 })
 console.log('[bot] Polling started')
 
+const sendAlert = (msg: string) => sendSystemAlert(bot, msg)
+
+// Notify on startup — if PM2 restarted the process after a crash, you'll see this
+sendAlert('🟢 <b>CarMatch worker started</b>')
+  .catch(err => console.error('[worker] Failed to send startup alert:', err))
+
 // ─── Cron jobs ────────────────────────────────────────────────────────────────
 
-startJobs((listing) => sendListingAlert(bot, listing))
+startJobs(
+  (listing) => sendListingAlert(bot, listing),
+  sendAlert,
+)
 
 // ─── Graceful shutdown ────────────────────────────────────────────────────────
 

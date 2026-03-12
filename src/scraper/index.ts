@@ -41,8 +41,13 @@ function randomDelay(minMs: number, maxMs: number): Promise<void> {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
+// Track whether we've already alerted about the current session-invalid episode
+// so we don't spam on every cron tick.
+let sessionAlertSent = false
+
 export async function runScrapeCycle(
   onNewListing?: (listing: Listing) => Promise<void>,
+  onError?: (message: string) => Promise<void>,
 ): Promise<ScrapeResult> {
   const result: ScrapeResult = { profilesRun: 0, inserted: 0, skipped: 0, errors: 0 }
 
@@ -50,10 +55,21 @@ export async function runScrapeCycle(
   const context = await getBrowserContext()
 
   if (!await isSessionValid(context)) {
-    console.error('[scraper] FB session invalid — run `npx tsx scripts/fb-login.ts` to re-authenticate')
+    console.error('[scraper] FB session invalid — run `npm run fb:login` to re-authenticate')
     await writeStatusFile('error', 0, 'FB session invalid')
+    if (!sessionAlertSent && onError) {
+      sessionAlertSent = true
+      await onError(
+        '⚠️ <b>FB session expired</b>\n\n' +
+        'The scraper has stopped. Run <code>npm run fb:login</code> on your Mac, ' +
+        'then copy <code>data/fb-session.json</code> to the server and restart the worker.',
+      ).catch(() => {})
+    }
     return result
   }
+
+  // Session is valid — reset alert flag so we notify again if it expires later
+  sessionAlertSent = false
 
   // ── Load active profiles ───────────────────────────────────────────────────
   const activeProfiles = db
@@ -133,6 +149,12 @@ export async function runScrapeCycle(
     } catch (err) {
       console.error(`[scraper] Error scraping profile "${profile.name}":`, err)
       result.errors++
+      if (onError) {
+        await onError(
+          `⚠️ <b>Scraper error</b> — profile "<i>${profile.name}</i>"\n\n` +
+          `<code>${String(err).slice(0, 400)}</code>`,
+        ).catch(() => {})
+      }
     } finally {
       await page.close()
     }

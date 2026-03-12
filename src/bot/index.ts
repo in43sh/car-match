@@ -42,6 +42,18 @@ export function createBot(): Bot<Context> {
   return bot
 }
 
+// ─── System alert helper ──────────────────────────────────────────────────────
+
+/**
+ * Sends a plain system/error notification to the owner.
+ * Used by the scraper and worker to report issues proactively.
+ */
+export async function sendSystemAlert(bot: Bot<Context>, message: string): Promise<void> {
+  const chatId = Number(process.env.TELEGRAM_ALLOWED_USER_ID)
+  if (!chatId) return
+  await bot.api.sendMessage(chatId, message, { parse_mode: 'HTML' })
+}
+
 // ─── Alert helper ─────────────────────────────────────────────────────────────
 
 /**

@@ -7,6 +7,7 @@ import type { Listing } from '@/db/schema'
  */
 export function startJobs(
   onNewListing?: (listing: Listing) => Promise<void>,
+  onError?: (message: string) => Promise<void>,
 ): void {
-  registerScrapeJob(onNewListing)
+  registerScrapeJob(onNewListing, onError)
 }
