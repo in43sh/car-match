@@ -16,6 +16,7 @@ type ListingDetail = {
   imageUrl: string | null
   sellerType: 'private' | 'dealer' | null
   status: 'new' | 'interested' | 'rejected' | 'contacted'
+  notes: string | null
   profileName: string | null
   alertedAt: string | null
   createdAt: string
@@ -60,6 +61,9 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
   const [loading, setLoading]       = useState(true)
   const [notFound, setNotFound]     = useState(false)
   const [updatingStatus, setUpdating] = useState(false)
+  const [notes, setNotes]           = useState('')
+  const [savingNotes, setSavingNotes] = useState(false)
+  const [notesSaved, setNotesSaved] = useState(false)
   const [carfaxMode, setMode]       = useState<'url' | 'file'>('url')
   const [carfaxUrl, setCarfaxUrl]   = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -68,7 +72,9 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
   async function load() {
     const res = await fetch(`/api/listings/${id}`)
     if (res.status === 404) { setNotFound(true); setLoading(false); return }
-    setListing(await res.json())
+    const data = await res.json() as ListingDetail
+    setListing(data)
+    setNotes(data.notes ?? '')
     setLoading(false)
   }
 
@@ -84,6 +90,18 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
     })
     if (res.ok) setListing(prev => prev ? { ...prev, status: status as ListingDetail['status'] } : prev)
     setUpdating(false)
+  }
+
+  async function saveNotes() {
+    setSavingNotes(true)
+    await fetch(`/api/listings/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notes: notes || null }),
+    })
+    setSavingNotes(false)
+    setNotesSaved(true)
+    setTimeout(() => setNotesSaved(false), 2000)
   }
 
   async function deleteListing() {
@@ -203,6 +221,28 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
               {s}
             </button>
           ))}
+        </div>
+      </div>
+
+      {/* Notes */}
+      <div className="mb-6">
+        <div className="text-xs text-[#6b7280] mb-2">Notes</div>
+        <textarea
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder="Add notes about this listing…"
+          rows={3}
+          className="w-full bg-[#161616] border border-[#2a2a2a] rounded-lg px-3 py-2 text-sm text-[#f0f0f0] placeholder-[#4b5563] focus:outline-none focus:border-[#10b981] resize-none"
+        />
+        <div className="flex items-center gap-3 mt-2">
+          <button
+            onClick={saveNotes}
+            disabled={savingNotes}
+            className="px-3 py-1.5 bg-[#1f1f1f] border border-[#2a2a2a] rounded text-xs text-[#f0f0f0] hover:border-[#444] disabled:opacity-50 transition-colors"
+          >
+            {savingNotes ? 'Saving…' : 'Save'}
+          </button>
+          {notesSaved && <span className="text-xs text-[#10b981]">Saved</span>}
         </div>
       </div>
 

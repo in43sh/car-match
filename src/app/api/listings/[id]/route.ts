@@ -40,6 +40,29 @@ export async function GET(
   })
 }
 
+// ─── PATCH /api/listings/[id] ────────────────────────────────────────────────
+
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } },
+) {
+  const id = parseInt(params.id, 10)
+  if (isNaN(id)) return NextResponse.json({ error: 'Invalid id' }, { status: 400 })
+
+  const body = await request.json() as { notes?: string }
+
+  const [updated] = db
+    .update(listings)
+    .set({ notes: body.notes ?? null, updatedAt: new Date().toISOString() })
+    .where(eq(listings.id, id))
+    .returning()
+    .all()
+
+  if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  return NextResponse.json({ ok: true })
+}
+
 // ─── DELETE /api/listings/[id] ────────────────────────────────────────────────
 
 export async function DELETE(
