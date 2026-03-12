@@ -30,6 +30,7 @@ export async function GET() {
     lastRunAt:      file?.lastRunAt     ?? null,
     nextRunAt:      file?.nextRunAt     ?? null,
     activeProfiles,
+    ...(file?.lastError ? { lastError: file.lastError } : {}),
   }
 
   return NextResponse.json(response)

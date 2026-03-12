@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Car, Settings, FileText, Menu, X } from 'lucide-react'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 const NAV_ITEMS = [
   { href: '/',         label: 'Listings',       icon: Car },
@@ -11,25 +11,82 @@ const NAV_ITEMS = [
   { href: '/carfax',   label: 'Carfax History',  icon: FileText },
 ] as const
 
-function ScraperStatus() {
-  const [status, setStatus] = useState<'active' | 'error' | 'idle' | null>(null)
+type StatusData = {
+  scraper: 'active' | 'error' | 'idle'
+  lastRunAt: string | null
+  nextRunAt: string | null
+  lastError?: string
+}
 
-  useEffect(() => {
+function timeAgo(iso: string): string {
+  const secs = Math.floor((Date.now() - new Date(iso).getTime()) / 1000)
+  if (secs < 60)  return `${secs}s ago`
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ago`
+  return `${Math.floor(secs / 3600)}h ago`
+}
+
+function timeUntil(iso: string): string {
+  const secs = Math.floor((new Date(iso).getTime() - Date.now()) / 1000)
+  if (secs <= 0)  return 'any moment'
+  if (secs < 60)  return `${secs}s`
+  if (secs < 3600) return `${Math.floor(secs / 60)}m`
+  return `${Math.floor(secs / 3600)}h`
+}
+
+function ScraperStatus() {
+  const [data, setData] = useState<StatusData | null>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const poll = useCallback(() => {
     fetch('/api/status')
       .then(r => r.json())
-      .then(d => setStatus(d.scraper))
-      .catch(() => setStatus('error'))
+      .then((d: StatusData) => {
+        setData(d)
+        // Schedule next poll: aligned to nextRunAt when healthy, 60s on error
+        let delayMs = 60_000
+        if (d.scraper !== 'error' && d.nextRunAt) {
+          const msUntilNext = new Date(d.nextRunAt).getTime() - Date.now()
+          if (msUntilNext > 0) delayMs = msUntilNext + 5_000
+        }
+        timerRef.current = setTimeout(poll, Math.max(15_000, Math.min(delayMs, 10 * 60_000)))
+      })
+      .catch(() => {
+        setData(prev => prev ? { ...prev, scraper: 'error' } : null)
+        timerRef.current = setTimeout(poll, 60_000)
+      })
   }, [])
 
-  if (!status) return null
+  useEffect(() => {
+    poll()
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [poll])
 
-  const color = status === 'active' ? 'bg-accent-emerald' : status === 'error' ? 'bg-accent-red' : 'bg-[#6b7280]'
-  const label = status === 'active' ? 'Active' : status === 'error' ? 'Error' : 'Idle'
+  if (!data) return null
+
+  const dot   = data.scraper === 'active' ? 'bg-accent-emerald' : data.scraper === 'error' ? 'bg-accent-red' : 'bg-[#6b7280]'
+  const label = data.scraper === 'active' ? 'Active' : data.scraper === 'error' ? 'Error' : 'Idle'
 
   return (
-    <div className="flex items-center gap-2 text-xs text-[#6b7280]">
-      <span className={`h-2 w-2 rounded-full ${color}`} />
-      <span>Scraper: {label}</span>
+    <div className="space-y-1">
+      <div className="flex items-center gap-2 text-xs text-[#6b7280]">
+        <span className={`h-2 w-2 rounded-full shrink-0 ${dot}`} />
+        <span>Scraper: {label}</span>
+      </div>
+      {data.lastRunAt && (
+        <div className="text-xs text-[#4b5563] pl-4">
+          Last run: {timeAgo(data.lastRunAt)}
+        </div>
+      )}
+      {data.scraper !== 'error' && data.nextRunAt && (
+        <div className="text-xs text-[#4b5563] pl-4">
+          Next: in {timeUntil(data.nextRunAt)}
+        </div>
+      )}
+      {data.scraper === 'error' && data.lastError && (
+        <div className="text-xs text-[#f87171] pl-4 leading-tight break-words">
+          {data.lastError}
+        </div>
+      )}
     </div>
   )
 }

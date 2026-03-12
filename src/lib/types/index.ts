@@ -107,6 +107,7 @@ export interface StatusResponse {
   lastRunAt: string | null
   nextRunAt: string | null
   activeProfiles: number
+  lastError?: string
 }
 
 // Shape written to data/status.json by the worker after each scrape cycle
