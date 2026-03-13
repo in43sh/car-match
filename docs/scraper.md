@@ -120,6 +120,16 @@ Split on `" in "` (with spaces) to get title and location. If the alt text is mi
 
 ---
 
+## Quiet Hours
+
+Each search profile can have a quiet window (`quietFrom` / `quietUntil`, stored as UTC hours 0–23). When the scraper cycle runs, any profile whose quiet window is currently active is **skipped entirely** — no scrape, no Telegram alerts for that profile until the window ends.
+
+The window supports overnight ranges (e.g. `from=22, until=6` covers 22:00–06:00). If either value is `null`, quiet hours are disabled for that profile.
+
+Configure per profile in the dashboard under **Profiles → Edit**.
+
+---
+
 ## Rate Limiting Tuning
 
 Current defaults in `src/scraper/browser.ts`:

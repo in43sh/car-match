@@ -100,7 +100,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ── Sidebar (desktop) ──────────────────────────────────────────── */}
       <aside className="hidden lg:flex flex-col w-52 shrink-0 border-r border-[#2a2a2a] bg-[#161616]">
         <div className="px-5 py-4 border-b border-[#2a2a2a]">
-          <span className="text-lg font-semibold tracking-tight text-[#f0f0f0]">CarMatch</span>
+          <Link href="/" className="text-lg font-semibold tracking-tight text-[#f0f0f0] hover:text-white">CarMatch</Link>
         </div>
 
         <nav className="flex-1 px-2 py-3 space-y-0.5">
@@ -154,7 +154,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── Mobile top bar ─────────────────────────────────────────────── */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 h-12 bg-[#161616] border-b border-[#2a2a2a]">
-        <span className="text-sm font-semibold text-[#f0f0f0]">CarMatch</span>
+        <Link href="/" className="text-sm font-semibold text-[#f0f0f0] hover:text-white">CarMatch</Link>
         <button
           onClick={() => setMobileOpen(o => !o)}
           className="text-[#6b7280] hover:text-[#f0f0f0]"
