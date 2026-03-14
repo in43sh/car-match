@@ -62,6 +62,7 @@ export interface CreateProfileBody {
   name: string
   make?: string
   model?: string
+  modelText?: string
   minYear?: number
   maxPrice?: number
   maxMileage?: number

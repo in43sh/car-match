@@ -1,6 +1,6 @@
 # CarMatch
 
-Self-hosted Facebook Marketplace monitor for used cars. Scrapes configured search profiles every few minutes, deduplicates listings, sends Telegram alerts for new matches, and lets you parse CARFAX reports from a dashboard.
+Self-hosted used-car monitor. Scrapes Facebook Marketplace and supported dealership inventory pages every few minutes, deduplicates listings, sends Telegram alerts for new matches, and lets you parse CARFAX reports from a dashboard.
 
 ## Stack
 
@@ -8,7 +8,7 @@ Self-hosted Facebook Marketplace monitor for used cars. Scrapes configured searc
 |---|---|
 | Backend + Dashboard | Next.js 14 App Router |
 | Database | SQLite via Drizzle ORM |
-| Scraper | Playwright (persistent FB session) |
+| Scraper | Playwright (persistent FB session + dealership scraping) |
 | Telegram bot | grammY (polling) |
 | Scheduler | node-cron |
 | Process manager | pm2 (two processes: `web` + `worker`) |

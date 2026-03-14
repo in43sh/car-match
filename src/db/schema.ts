@@ -13,6 +13,8 @@ export const searchProfiles = sqliteTable('search_profiles', {
   make:           text('make'),
   /** FB numeric model ID, e.g. "582109948940125". Omit URL param if null. */
   model:          text('model'),
+  /** Source-agnostic model text used for dealer/title matching, e.g. "camry" or "silverado 1500". */
+  modelText:      text('model_text'),
   /** Year floor — applied both as URL param (minYear) and as post-filter. */
   minYear:        integer('min_year'),
   maxPrice:       integer('max_price'),

@@ -22,6 +22,7 @@ interface FormState {
   name: string
   make: string
   model: string
+  modelText: string
   minYear: string
   maxPrice: string
   maxMileage: string
@@ -40,6 +41,7 @@ const DEFAULT_FORM: FormState = {
   name: '',
   make: '',
   model: '',
+  modelText: '',
   minYear: '',
   maxPrice: '',
   maxMileage: '',
@@ -59,6 +61,7 @@ function profileToForm(p: SearchProfile): FormState {
     name:           p.name,
     make:           p.make ?? '',
     model:          p.model ?? '',
+    modelText:      p.modelText ?? '',
     minYear:        p.minYear?.toString() ?? '',
     maxPrice:       p.maxPrice?.toString() ?? '',
     maxMileage:     p.maxMileage?.toString() ?? '',
@@ -88,6 +91,7 @@ function ProfileSummary({ p }: { p: SearchProfile }) {
   if (p.make) parts.push(p.make.charAt(0).toUpperCase() + p.make.slice(1))
   else if (p.japaneseOnly) parts.push('Japanese brands')
   else parts.push('Any make')
+  if (p.modelText) parts.push(p.modelText)
   if (p.maxPrice)   parts.push(`≤ $${p.maxPrice.toLocaleString()}`)
   if (p.maxMileage) parts.push(`≤ ${p.maxMileage.toLocaleString()} mi`)
   if (p.minYear)    parts.push(`≥ ${p.minYear}`)
@@ -150,9 +154,25 @@ function ProfileForm({
           </select>
         </div>
         <div>
-          <label className={labelCls}>Model ID</label>
+          <label className={labelCls}>Facebook Model ID</label>
           <input className={inputCls} value={form.model} onChange={e => set('model', e.target.value)} placeholder="FB numeric ID" />
+          <p className="mt-1 text-xs text-[#6b7280]">
+            Only used for Facebook Marketplace URL filtering. Leave blank if you do not have the numeric model ID.
+          </p>
         </div>
+      </div>
+
+      <div>
+        <label className={labelCls}>Model Text</label>
+        <input
+          className={inputCls}
+          value={form.modelText}
+          onChange={e => set('modelText', e.target.value)}
+          placeholder="camry, cx-5, silverado 1500"
+        />
+        <p className="mt-1 text-xs text-[#6b7280]">
+          Used for dealership/title matching, for example: camry, cx-5, silverado 1500.
+        </p>
       </div>
 
       {/* Year / Price / Mileage */}
@@ -418,6 +438,7 @@ function formToPayload(form: FormState) {
     name:           form.name,
     make:           form.make   || undefined,
     model:          form.model  || undefined,
+    modelText:      form.modelText || undefined,
     minYear:        form.minYear    ? parseInt(form.minYear, 10)    : undefined,
     maxPrice:       form.maxPrice   ? parseInt(form.maxPrice, 10)   : undefined,
     maxMileage:     form.maxMileage ? parseInt(form.maxMileage, 10) : undefined,

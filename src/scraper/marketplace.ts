@@ -8,34 +8,11 @@
  */
 
 import type { Page } from 'playwright'
+import type { SearchProfile } from '@/db/schema'
 import { getMakeId, isJapaneseBrand } from './brands'
+import { extractYear, parseMileage, parsePrice, type ScrapedListing } from './shared'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-export interface SearchProfile {
-  id: number
-  location: string       // city slug, e.g. "tampa"
-  make: string | null    // brand key, e.g. "toyota"
-  model: string | null   // FB numeric model ID
-  minYear: number | null
-  maxPrice: number | null
-  maxMileage: number | null
-  includePrivate: boolean
-  includeDealers: boolean
-  japaneseOnly: boolean
-}
-
-export interface ScrapedListing {
-  fbListingId: string
-  title: string
-  price: number | null
-  mileage: number | null
-  year: number | null
-  location: string | null
-  fbUrl: string
-  imageUrl: string | null
-  sellerType: 'private' | 'dealer' | null
-}
 
 // ─── URL Builder ──────────────────────────────────────────────────────────────
 
@@ -74,30 +51,6 @@ export function buildSearchUrl(profile: SearchProfile): string {
 }
 
 // ─── Parsers ──────────────────────────────────────────────────────────────────
-
-/** "$13,899" → 13899 | "Price not listed" | "Free" → null */
-function parsePrice(text: string): number | null {
-  const match = text.match(/^\$([0-9,]+)$/)
-  if (!match) return null
-  return parseInt(match[1].replace(/,/g, ''), 10)
-}
-
-/**
- * "95K miles" → 95000 | "67,000 miles" → 67000 | "1,234 miles" → 1234
- * Returns null if the text doesn't match a mileage pattern.
- */
-function parseMileage(text: string): number | null {
-  const match = text.match(/^([0-9,]+(?:\.[0-9]+)?)\s*(K)?\s*miles?$/i)
-  if (!match) return null
-  const num = parseFloat(match[1].replace(/,/g, ''))
-  return match[2] ? Math.round(num * 1000) : Math.round(num)
-}
-
-/** Extract 4-digit year from the start of a title string. */
-function extractYear(title: string): number | null {
-  const match = title.match(/^(19|20)\d{2}\b/)
-  return match ? parseInt(match[0], 10) : null
-}
 
 /** Strip FB tracking query params from the href. */
 function cleanHref(href: string): string {

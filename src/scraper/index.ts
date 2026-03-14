@@ -17,10 +17,12 @@
 import { eq } from 'drizzle-orm'
 import { db } from '@/db'
 import { listings, searchProfiles } from '@/db/schema'
-import type { Listing } from '@/db/schema'
+import type { Listing, SearchProfile } from '@/db/schema'
 import { getBrowserContext, saveSessionCookies } from './browser'
 import { isSessionValid } from './session'
 import { scrapeListings } from './marketplace'
+import { scrapeGaaInventory } from './gaa'
+import { matchesProfile, type ScrapedListing } from './shared'
 import { writeStatusFile } from '@/lib/status'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -50,40 +52,8 @@ function isInQuietWindow(quietFrom: number | null, quietUntil: number | null): b
   }
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
-
-// Track whether we've already alerted about the current session-invalid episode
-// so we don't spam on every cron tick.
-let sessionAlertSent = false
-
-export async function runScrapeCycle(
-  onNewListing?: (listing: Listing) => Promise<void>,
-  onError?: (message: string) => Promise<void>,
-): Promise<ScrapeResult> {
-  const result: ScrapeResult = { profilesRun: 0, inserted: 0, skipped: 0, errors: 0 }
-
-  // ── Session check ──────────────────────────────────────────────────────────
-  const context = await getBrowserContext()
-
-  if (!await isSessionValid(context)) {
-    console.error('[scraper] FB session invalid — run `npm run fb:login` to re-authenticate')
-    await writeStatusFile('error', 0, 'FB session invalid')
-    if (!sessionAlertSent && onError) {
-      sessionAlertSent = true
-      await onError(
-        '⚠️ <b>FB session expired</b>\n\n' +
-        'The scraper has stopped. Run <code>npm run fb:login</code> on your Mac, ' +
-        'then copy <code>data/fb-session.json</code> to the server and restart the worker.',
-      ).catch(() => {})
-    }
-    return result
-  }
-
-  // Session is valid — reset alert flag so we notify again if it expires later
-  sessionAlertSent = false
-
-  // ── Load active profiles ───────────────────────────────────────────────────
-  const activeProfiles = db
+function getActiveProfiles(): SearchProfile[] {
+  return db
     .select()
     .from(searchProfiles)
     .where(eq(searchProfiles.isActive, true))
@@ -95,6 +65,79 @@ export async function runScrapeCycle(
       }
       return true
     })
+}
+
+async function persistListing(
+  profile: SearchProfile,
+  s: ScrapedListing,
+  result: ScrapeResult,
+  onNewListing?: (listing: Listing) => Promise<void>,
+): Promise<void> {
+  const existing = db
+    .select({ id: listings.id, matchedProfileIds: listings.matchedProfileIds })
+    .from(listings)
+    .where(eq(listings.fbListingId, s.fbListingId))
+    .get()
+
+  if (existing) {
+    result.skipped++
+    const ids: number[] = JSON.parse(existing.matchedProfileIds ?? '[]')
+    if (!ids.includes(profile.id)) {
+      ids.push(profile.id)
+      db.update(listings)
+        .set({ matchedProfileIds: JSON.stringify(ids) })
+        .where(eq(listings.id, existing.id))
+        .run()
+    }
+    return
+  }
+
+  const now = new Date().toISOString()
+  const [inserted] = db.insert(listings).values({
+    fbListingId:       s.fbListingId,
+    profileId:         profile.id,
+    title:             s.title,
+    price:             s.price ?? null,
+    mileage:           s.mileage ?? null,
+    year:              s.year ?? null,
+    location:          s.location ?? null,
+    fbUrl:             s.fbUrl,
+    imageUrl:          s.imageUrl ?? null,
+    sellerType:        s.sellerType ?? null,
+    status:            'new',
+    matchedProfileIds: JSON.stringify([profile.id]),
+    createdAt:         now,
+    updatedAt:         now,
+  }).returning().all()
+
+  result.inserted++
+  console.log(`[scraper] New listing: "${inserted.title}" ($${inserted.price ?? '?'})`)
+
+  if (!onNewListing) return
+
+  try {
+    await onNewListing(inserted)
+    db.update(listings)
+      .set({ alertedAt: new Date().toISOString() })
+      .where(eq(listings.id, inserted.id))
+      .run()
+  } catch (alertErr) {
+    console.error('[scraper] Alert failed for listing', inserted.id, alertErr)
+  }
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+// Track whether we've already alerted about the current session-invalid episode
+// so we don't spam on every cron tick.
+let sessionAlertSent = false
+
+export async function runScrapeCycle(
+  onNewListing?: (listing: Listing) => Promise<void>,
+  onError?: (message: string) => Promise<void>,
+): Promise<ScrapeResult> {
+  const result: ScrapeResult = { profilesRun: 0, inserted: 0, skipped: 0, errors: 0 }
+  const activeProfiles = getActiveProfiles()
 
   if (activeProfiles.length === 0) {
     console.log('[scraper] No active profiles — nothing to scrape')
@@ -102,94 +145,85 @@ export async function runScrapeCycle(
     return result
   }
 
-  console.log(`[scraper] Starting cycle — ${activeProfiles.length} active profile(s)`)
+  const context = await getBrowserContext()
+
+  // ── Dealer scrape ──────────────────────────────────────────────────────────
+  const dealerPage = await context.newPage()
+  try {
+    console.log('[scraper] GAA Auto Sales — scraping inventory')
+    const dealerListings = await scrapeGaaInventory(dealerPage)
+    console.log(`[scraper] GAA Auto Sales — scraped ${dealerListings.length} listing(s)`)
+
+    for (const profile of activeProfiles) {
+      const matchedDealerListings = dealerListings.filter(listing => matchesProfile(listing, profile))
+      for (const listing of matchedDealerListings) {
+        await persistListing(profile, listing, result, onNewListing)
+      }
+    }
+  } catch (err) {
+    console.error('[scraper] Error scraping GAA Auto Sales:', err)
+    result.errors++
+    if (onError) {
+      await onError(
+        `⚠️ <b>Scraper error</b> — source "<i>GAA Auto Sales</i>"\n\n` +
+        `<code>${String(err).slice(0, 400)}</code>`,
+      ).catch(() => {})
+    }
+  } finally {
+    await dealerPage.close()
+  }
+
+  // ── FB session check ───────────────────────────────────────────────────────
+  const fbSessionValid = await isSessionValid(context)
+
+  if (!fbSessionValid) {
+    console.error('[scraper] FB session invalid — run `npm run fb:login` to re-authenticate')
+    if (!sessionAlertSent && onError) {
+      sessionAlertSent = true
+      await onError(
+        '⚠️ <b>FB session expired</b>\n\n' +
+        'The scraper has stopped. Run <code>npm run fb:login</code> on your Mac, ' +
+        'then copy <code>data/fb-session.json</code> to the server and restart the worker.',
+      ).catch(() => {})
+    }
+  } else {
+    sessionAlertSent = false
+  }
 
   // ── Scrape each profile ────────────────────────────────────────────────────
-  for (const profile of activeProfiles) {
-    const page = await context.newPage()
+  if (fbSessionValid) {
+    console.log(`[scraper] Facebook Marketplace — starting cycle for ${activeProfiles.length} active profile(s)`)
 
-    try {
-      console.log(`[scraper] Profile "${profile.name}" — ${profile.location}`)
+    for (const profile of activeProfiles) {
+      const page = await context.newPage()
 
-      const scraped = await scrapeListings(page, profile)
-      console.log(`[scraper] Scraped ${scraped.length} matching listing(s)`)
+      try {
+        console.log(`[scraper] FB profile "${profile.name}" — ${profile.location}`)
 
-      for (const s of scraped) {
-        // Dedup check
-        const existing = db
-          .select({ id: listings.id, matchedProfileIds: listings.matchedProfileIds })
-          .from(listings)
-          .where(eq(listings.fbListingId, s.fbListingId))
-          .get()
+        const scraped = await scrapeListings(page, profile)
+        console.log(`[scraper] Scraped ${scraped.length} matching FB listing(s)`)
 
-        if (existing) {
-          result.skipped++
-          // Track this profile as also matching the listing
-          const ids: number[] = JSON.parse(existing.matchedProfileIds ?? '[]')
-          if (!ids.includes(profile.id)) {
-            ids.push(profile.id)
-            db.update(listings)
-              .set({ matchedProfileIds: JSON.stringify(ids) })
-              .where(eq(listings.id, existing.id))
-              .run()
-          }
-          continue
+        for (const s of scraped) {
+          await persistListing(profile, s, result, onNewListing)
         }
 
-        // Insert
-        const now = new Date().toISOString()
-        const [inserted] = db.insert(listings).values({
-          fbListingId:       s.fbListingId,
-          profileId:         profile.id,
-          title:             s.title,
-          price:             s.price ?? null,
-          mileage:           s.mileage ?? null,
-          year:              s.year ?? null,
-          location:          s.location ?? null,
-          fbUrl:             s.fbUrl,
-          imageUrl:          s.imageUrl ?? null,
-          sellerType:        s.sellerType ?? null,
-          status:            'new',
-          matchedProfileIds: JSON.stringify([profile.id]),
-          createdAt:         now,
-          updatedAt:         now,
-        }).returning().all()
-
-        result.inserted++
-        console.log(`[scraper] New listing: "${inserted.title}" ($${inserted.price ?? '?'})`)
-
-        // Alert callback (wired in Step 18)
-        if (onNewListing) {
-          try {
-            await onNewListing(inserted)
-            // Mark alerted
-            db.update(listings)
-              .set({ alertedAt: new Date().toISOString() })
-              .where(eq(listings.id, inserted.id))
-              .run()
-          } catch (alertErr) {
-            console.error('[scraper] Alert failed for listing', inserted.id, alertErr)
-          }
+        result.profilesRun++
+      } catch (err) {
+        console.error(`[scraper] Error scraping profile "${profile.name}":`, err)
+        result.errors++
+        if (onError) {
+          await onError(
+            `⚠️ <b>Scraper error</b> — profile "<i>${profile.name}</i>"\n\n` +
+            `<code>${String(err).slice(0, 400)}</code>`,
+          ).catch(() => {})
         }
+      } finally {
+        await page.close()
       }
 
-      result.profilesRun++
-    } catch (err) {
-      console.error(`[scraper] Error scraping profile "${profile.name}":`, err)
-      result.errors++
-      if (onError) {
-        await onError(
-          `⚠️ <b>Scraper error</b> — profile "<i>${profile.name}</i>"\n\n` +
-          `<code>${String(err).slice(0, 400)}</code>`,
-        ).catch(() => {})
+      if (activeProfiles.indexOf(profile) < activeProfiles.length - 1) {
+        await randomDelay(5_000, 10_000)
       }
-    } finally {
-      await page.close()
-    }
-
-    // Rate limiting — pause between profiles
-    if (activeProfiles.indexOf(profile) < activeProfiles.length - 1) {
-      await randomDelay(5_000, 10_000)
     }
   }
 
