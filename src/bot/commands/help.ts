@@ -5,6 +5,8 @@ export async function handleHelp(ctx: CommandContext<Context>) {
     '📋 <b>Commands</b>\n\n' +
     '/status — scraper health (last run, next run, errors)\n' +
     '/recent — 5 most recent New/Interested listings\n' +
+    '/pause — pause all scrapers\n' +
+    '/resume — resume all scrapers\n' +
     '/interested <i>id</i> — mark listing as Interested\n' +
     '/reject <i>id</i> — mark listing as Rejected\n' +
     '/contact <i>id</i> — mark listing as Contacted\n' +

@@ -15,6 +15,7 @@ import {
   handleContact,
   handleCallbackStatus,
 } from './commands/status'
+import { handlePauseAll, handleResumeAll } from './commands/pause-all'
 import { formatListingAlert } from '@/lib/telegram/formatters'
 import { listingKeyboard } from '@/lib/telegram/keyboards'
 
@@ -37,6 +38,8 @@ export function createBot(): Bot<Context> {
   bot.command('interested', handleInterested)
   bot.command('reject',     handleReject)
   bot.command('contact',    handleContact)
+  bot.command('pause',      handlePauseAll)
+  bot.command('resume',     handleResumeAll)
 
   // Inline keyboard callbacks (interested:42, reject:42, contact:42)
   bot.on('callback_query:data', handleCallbackStatus)
