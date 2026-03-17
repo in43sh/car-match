@@ -22,6 +22,7 @@ import { getBrowserContext, saveSessionCookies } from './browser'
 import { isSessionValid } from './session'
 import { scrapeListings } from './marketplace'
 import { scrapeGaaInventory } from './gaa'
+import { scrapeCraigslist } from './craigslist'
 import { matchesProfile, type ScrapedListing } from './shared'
 import { writeStatusFile } from '@/lib/status'
 
@@ -224,6 +225,33 @@ export async function runScrapeCycle(
       if (activeProfiles.indexOf(profile) < activeProfiles.length - 1) {
         await randomDelay(5_000, 10_000)
       }
+    }
+  }
+
+  // ── Craigslist scrape ──────────────────────────────────────────────────────
+  console.log(`[scraper] Craigslist — starting cycle for ${activeProfiles.length} active profile(s)`)
+
+  for (const profile of activeProfiles) {
+    try {
+      const scraped = await scrapeCraigslist(profile)
+      console.log(`[scraper] CL profile "${profile.name}" — ${scraped.length} listing(s)`)
+
+      for (const s of scraped) {
+        await persistListing(profile, s, result, onNewListing)
+      }
+    } catch (err) {
+      console.error(`[scraper] Error scraping CL profile "${profile.name}":`, err)
+      result.errors++
+      if (onError) {
+        await onError(
+          `⚠️ <b>Scraper error</b> — CL profile "<i>${profile.name}</i>"\n\n` +
+          `<code>${String(err).slice(0, 400)}</code>`,
+        ).catch(() => {})
+      }
+    }
+
+    if (activeProfiles.indexOf(profile) < activeProfiles.length - 1) {
+      await randomDelay(2_000, 5_000)
     }
   }
 

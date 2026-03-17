@@ -49,6 +49,30 @@ Scrapes the full vehicle inventory from a specific local dealership.
 
 ---
 
+### 3. Craigslist (`src/scraper/craigslist.ts`)
+
+Scrapes Craigslist "cars & trucks — all" for each active search profile via RSS.
+
+| Property | Value |
+|---|---|
+| Source | `{city}.craigslist.org/search/cta?format=rss` |
+| Auth required | No |
+| Pagination | No — first page of RSS results only (~25 listings) |
+| Deduplication key | `cl_` + 10-digit Craigslist listing ID from URL |
+| Seller type | Not available in RSS (`null`) |
+| Mileage | Not available in RSS (`null`) |
+
+**How it works:**
+1. Maps `profile.location` to a Craigslist subdomain (see `SUBDOMAIN_MAP` in the file)
+2. Builds an RSS URL using `query`, `max_price`, `max_auto_miles`, `min_auto_year`, `search_distance`
+3. Fetches the RSS feed with plain `fetch` — no browser needed
+4. Parses `<item>` elements with cheerio in XML mode: extracts title, price, year, location, image from title text and enclosure tag
+5. Returns `ScrapedListing[]` — deduplication and profile matching handled in `src/scraper/index.ts`
+
+**Adding a new city:** Add a `"city name": "subdomain"` entry to `SUBDOMAIN_MAP` in the scraper file. Find the correct subdomain at [craigslist.org](https://www.craigslist.org/about/sites).
+
+---
+
 ## Scrape cycle order (`src/scraper/index.ts`)
 
 Each cron tick runs:
