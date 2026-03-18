@@ -50,3 +50,6 @@ logs/
 
 # TypeScript build cache
 tsconfig.tsbuildinfo
+
+# Temp files
+tmp/
