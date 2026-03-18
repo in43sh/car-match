@@ -50,20 +50,24 @@ async function main() {
   })
 
   console.log('   👉 Log in manually in the browser window.')
+  console.log('   Complete any CAPTCHA or verification steps if prompted.')
   console.log('   Waiting for login to complete…\n')
 
-  // Wait until the URL no longer contains /login or checkpoint
+  // Wait until the URL no longer contains /login, checkpoint, or captcha
   await page.waitForFunction(
     () =>
       !window.location.href.includes('/login') &&
-      !window.location.href.includes('checkpoint'),
-    { timeout: 5 * 60_000 }, // 5 minute timeout for manual login
+      !window.location.href.includes('checkpoint') &&
+      !window.location.href.includes('captcha') &&
+      !window.location.href.includes('two_step') &&
+      !window.location.href.includes('confirm'),
+    { timeout: 15 * 60_000 }, // 15 minute timeout for manual login + CAPTCHA
   )
 
   console.log(`   ✅ Logged in (redirected to: ${page.url()})`)
 
   // Brief wait to let FB settle and set all session cookies
-  await page.waitForTimeout(2_000)
+  await page.waitForTimeout(5_000)
 
   const cookies = await context.cookies()
 
